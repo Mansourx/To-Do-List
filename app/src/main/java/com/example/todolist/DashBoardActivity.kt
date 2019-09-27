@@ -2,6 +2,7 @@ package com.example.todolist
 
 import android.content.Context
 import android.content.DialogInterface
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -28,7 +29,7 @@ class DashBoardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dash_board)
         setSupportActionBar(dashboard_toolbar)
-        setTitle("DashBoard")
+        title = "DashBoard"
         rv_dashboard.layoutManager = LinearLayoutManager(this)
 
         dbHandler = DBHandler(this)
@@ -75,6 +76,12 @@ class DashBoardActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.toDoName.text = list[position].name
+            holder.toDoName.setOnClickListener{
+                val intent = Intent(context, ItemActivity::class.java)
+                intent.putExtra(INTENT_TODO_ID, list[position].id)
+                intent.putExtra(INTENT_TODO_NAME, list[position].name)
+                context.startActivity(intent)
+            }
         }
 
         class ViewHolder(v : View): RecyclerView.ViewHolder(v) {
