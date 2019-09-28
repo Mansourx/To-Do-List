@@ -72,7 +72,7 @@ class ItemActivity: AppCompatActivity() {
         super.onResume()
     }
     private fun refreshList(){
-        rv_item.adapter = ItemAdapter(this, dbHandler.getToDoItems(todoid))
+        rv_item.adapter = ItemAdapter(this, dbHandler, dbHandler.getToDoItems(todoid))
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
@@ -84,7 +84,7 @@ class ItemActivity: AppCompatActivity() {
     }
 
 
-    class ItemAdapter(val context : Context, val list: MutableList<ToDoItem>) : RecyclerView.Adapter<ItemAdapter.ViewHolder>() {
+    class ItemAdapter(val context : Context, val dbHandler: DBHandler, val list: MutableList<ToDoItem>) : RecyclerView.Adapter<ItemAdapter.ViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             return ViewHolder(LayoutInflater.from(context).inflate(R.layout.rv_child_item,parent,false))
         }
@@ -98,10 +98,8 @@ class ItemActivity: AppCompatActivity() {
             holder.itemName.text = list[position].itemName
             holder.itemName.isChecked = list[position].isCompleted
             holder.itemName.setOnClickListener{
-                val intent = Intent(context, ItemActivity::class.java)
-                intent.putExtra(INTENT_TODO_ID, list[position].id)
-                intent.putExtra(INTENT_TODO_NAME, list[position].itemName)
-                context.startActivity(intent)
+                list[position].isCompleted = !list[position].isCompleted
+              dbHandler.updateToDoItem(list[position])
             }
         }
 

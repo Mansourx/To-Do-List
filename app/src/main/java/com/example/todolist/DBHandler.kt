@@ -26,7 +26,7 @@ class DBHandler(val context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
                 "$COL_ID integer PRIMARY KEY AUTOINCREMENT," +
                 "$COL_CREATED_AT datetime," +
                 "$COL_TODO_ID integer," +
-                "$COL_IS_COMPLETED integer" +
+                "$COL_IS_COMPLETED integer," +
                 "$COL_ITEM_NAME varchar" +
                 ");"
 
@@ -35,7 +35,6 @@ class DBHandler(val context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     fun addToDo(toDo : ToDo): Boolean {
@@ -45,6 +44,14 @@ class DBHandler(val context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
         val result : Long = db.insert(TABLE_TODO, null, cv)
         return result != (-1).toLong()
     }
+
+    fun updateToDo(toDo : ToDo) {
+        val db : SQLiteDatabase = writableDatabase
+        val cv = ContentValues()
+        cv.put(COL_NAME,toDo.name)
+        db.update(TABLE_TODO, cv,"$COL_ID=?", arrayOf(toDo.id.toString()))
+    }
+
 
     fun getToDos() : MutableList<ToDo> {
         val result : MutableList<ToDo> = ArrayList()
@@ -64,19 +71,53 @@ class DBHandler(val context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
         return result
     }
 
-    fun addToDoItem (item : ToDoItem) : Boolean{
+    fun addToDoItem (item : ToDoItem) : Boolean {
         val db : SQLiteDatabase = writableDatabase
         val cv = ContentValues()
         cv.put(COL_TODO_ID, item.toDoId)
-       // cv.put(COL_ITEM_NAME, item.itemName)
+        cv.put(COL_ITEM_NAME, item.itemName)
 
         if (item.isCompleted) {
-            cv.put(COL_IS_COMPLETED, 1)
+            cv.put(COL_IS_COMPLETED, true)
         } else {
-            cv.put(COL_IS_COMPLETED, 0)
+            cv.put(COL_IS_COMPLETED, false)
         }
         val result : Long = db.insert(TABLE_TODO_ITEM, null, cv)
         return result != (-1).toLong()
+    }
+
+    fun deleteToDo (todoid: Long) {
+        val db = writableDatabase
+        db.delete(TABLE_TODO_ITEM,"$COL_TODO_ID=?", arrayOf(todoid.toString()))
+        db.delete(TABLE_TODO,"$COL_ID=?", arrayOf(todoid.toString()))
+    }
+
+    fun updateToDoItemComplete (todoid: Long, isCompleted : Boolean) {
+        val result : MutableList<ToDoItem> = ArrayList()
+
+        val db : SQLiteDatabase = readableDatabase
+        val queryResult : Cursor = db.rawQuery("SELECT * FROM $TABLE_TODO_ITEM WHERE $COL_TODO_ID=$todoid", null)
+
+        if (queryResult.moveToFirst()) {
+            do {
+                val item = ToDoItem()
+                item.id = queryResult.getLong(queryResult.getColumnIndex(COL_ID))
+                item.toDoId = queryResult.getLong(queryResult.getColumnIndex(COL_TODO_ID))
+                item.itemName = queryResult.getString(queryResult.getColumnIndex(COL_ITEM_NAME))
+                item.isCompleted = isCompleted
+                updateToDoItem(item)
+            } while (queryResult.moveToNext())
+        }
+
+        queryResult.close()
+    }
+    fun updateToDoItem (item : ToDoItem)  {
+        val db : SQLiteDatabase = writableDatabase
+        val cv = ContentValues()
+        cv.put(COL_TODO_ID, item.toDoId)
+        cv.put(COL_ITEM_NAME, item.itemName)
+        cv.put(COL_IS_COMPLETED, item.isCompleted)
+       db.update(TABLE_TODO_ITEM, cv, "$COL_ID=?", arrayOf(item.id.toString()))
     }
 
     fun getToDoItems(todoid : Long) : MutableList<ToDoItem> {
@@ -90,9 +131,8 @@ class DBHandler(val context: Context) : SQLiteOpenHelper(context, DB_NAME, null,
                 val item = ToDoItem()
                 item.id = queryResult.getLong(queryResult.getColumnIndex(COL_ID))
                 item.toDoId = queryResult.getLong(queryResult.getColumnIndex(COL_TODO_ID))
-                //item.itemName = queryResult.getString(queryResult.getColumnIndex(COL_ITEM_NAME))
+                item.itemName = queryResult.getString(queryResult.getColumnIndex(COL_ITEM_NAME))
                 item.isCompleted = queryResult.getInt(queryResult.getColumnIndex(COL_IS_COMPLETED)) == 1
-                item.toDoId = todoid
                 Log.i("Item Result >>>", item.itemName)
                 result.add(item)
             } while (queryResult.moveToNext())

@@ -9,12 +9,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.DTO.ToDo
 import kotlinx.android.synthetic.main.activity_dash_board.*
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.android.synthetic.main.rv_child_dashboard.view.*
 
 /**
  * Created by Ahmad Mansour on 27,September,2019
@@ -29,12 +32,13 @@ class DashBoardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dash_board)
         setSupportActionBar(dashboard_toolbar)
-        title = "DashBoard"
+        title = "ToDo App Home"
         rv_dashboard.layoutManager = LinearLayoutManager(this)
 
         dbHandler = DBHandler(this)
         fab.setOnClickListener {
             val dialog = AlertDialog.Builder(this)
+            dialog.setTitle("Add Your Task")
             val view = layoutInflater.inflate(R.layout.dialog_dashboard, null)
             val toDoName = view.findViewById<EditText>(R.id.ev_todo)
             dialog.setView(view)
@@ -55,18 +59,39 @@ class DashBoardActivity : AppCompatActivity() {
         }
     }
 
+    fun updateToDo (toDo: ToDo) {
+        val dialog = AlertDialog.Builder(this)
+        dialog.setTitle("Update Your Task")
+        val view = layoutInflater.inflate(R.layout.dialog_dashboard, null)
+        val toDoName = view.findViewById<EditText>(R.id.ev_todo)
+        toDoName.setText(toDo.name)
+        dialog.setView(view)
+        dialog.setPositiveButton("Update") { _: DialogInterface, i: Int ->
+            if (toDoName.text.isNotEmpty()) {
+                toDo.name = toDoName.text.toString()
+                dbHandler.updateToDo(toDo)
+                refreshList()
+            }
+        }
+
+        dialog.setNegativeButton("Cancel") { _: DialogInterface, i: Int ->
+
+
+        }
+        dialog.show()
+    }
     override fun onResume() {
-        super.onResume()
         refreshList()
+        super.onResume()
     }
 
     private fun refreshList() {
         rv_dashboard.adapter = DashBoardAdapter(this, dbHandler.getToDos())
     }
 
-    class DashBoardAdapter(val context : Context, val list: MutableList<ToDo>) : RecyclerView.Adapter<DashBoardAdapter.ViewHolder>() {
+    class DashBoardAdapter(val activity: DashBoardActivity, val list: MutableList<ToDo>) : RecyclerView.Adapter<DashBoardAdapter.ViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            return ViewHolder(LayoutInflater.from(context).inflate(R.layout.rv_child_dashboard,parent,false))
+            return ViewHolder(LayoutInflater.from(activity).inflate(R.layout.rv_child_dashboard,parent,false))
         }
 
         override fun getItemCount(): Int {
@@ -77,15 +102,41 @@ class DashBoardActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.toDoName.text = list[position].name
             holder.toDoName.setOnClickListener{
-                val intent = Intent(context, ItemActivity::class.java)
+                val intent = Intent(activity, ItemActivity::class.java)
                 intent.putExtra(INTENT_TODO_ID, list[position].id)
                 intent.putExtra(INTENT_TODO_NAME, list[position].name)
-                context.startActivity(intent)
+                activity.startActivity(intent)
+            }
+            holder.menu.setOnClickListener{
+                val popup = PopupMenu(activity, holder.menu)
+                popup.inflate(R.menu.dashboard_child)
+                popup.setOnMenuItemClickListener {
+
+                    when(it.itemId) {
+                        R.id.menu_delete -> {
+                            activity.dbHandler.deleteToDo(list[position].id)
+                            activity.refreshList()
+                        }
+                        R.id.menu_edit -> {
+                            activity.updateToDo(list[position])
+                        }
+                        R.id.menu_mark_as_completed -> {
+                            activity.dbHandler.updateToDoItemComplete(list[position].id, true)
+                        }
+                        R.id.menu_reset -> {
+                            activity.dbHandler.updateToDoItemComplete(list[position].id, false)
+                        }
+                    }
+
+                    true
+                }
+                popup.show()
             }
         }
 
-        class ViewHolder(v : View): RecyclerView.ViewHolder(v) {
-            val toDoName : TextView = v.findViewById(R.id.tv_todo_name)
+        class ViewHolder(view : View): RecyclerView.ViewHolder(view) {
+            val toDoName : TextView = view.tv_todo_name
+            val menu : ImageView = view.iv_menu
         }
     }
 }
